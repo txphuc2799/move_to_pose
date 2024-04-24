@@ -1,4 +1,4 @@
-controller_frequency: 50
+controller_frequency: 20
 control_period: 0.01
 robot_radius: 0.1993    # 0.1993 (front)  # 0.57197 (back)
 dock_displacement: 0.2
