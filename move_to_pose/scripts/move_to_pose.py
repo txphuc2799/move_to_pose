@@ -111,7 +111,7 @@ class MoveToPose(Utility):
 
         if (start_pose is None or goal_pose is None):
             rospy.logerr(f"Can not transfrom {start_frame_name} or {goal_frame_name}!")
-            return False
+            return None, None, None, None, None, None
 
         point_origin = Point(x = 0.0, y = 0.0, z = 0.0)
         point        = Point(x = (self.robot_radius_ + self.dock_displacement_), y = 0.0, z = 0.0)
@@ -147,12 +147,12 @@ class MoveToPose(Utility):
 
         goal_direction = self.pi2pi(math.atan2(g_y - s_y, g_x - s_x) - s_yaw)
 
-        if (abs(goal_direction) > math.pi/2):
+        if abs(goal_direction) > math.pi/2:
             is_target_behind_robot_ = True
         else:
             is_target_behind_robot_ = False
         
-        if (is_target_behind_robot_):
+        if is_target_behind_robot_:
             goal_rotation = euler_from_quaternion([goal_pose.transform.rotation.x,
                                                    goal_pose.transform.rotation.y,
                                                    goal_pose.transform.rotation.z,
@@ -162,14 +162,14 @@ class MoveToPose(Utility):
         else:
             g_yaw = np.deg2rad(self.getRotationAngle(v_new,origin_new))
 
-        return (s_x, s_y, s_yaw, g_x, g_y, g_yaw)
+        return s_x, s_y, s_yaw, g_x, g_y, g_yaw
     
 
     def isCloseToGoal(self, xy=None, s_yaw=None, g_yaw=None):
 
-        b1 = True if (xy is None) else (xy <= self.xy_tolerance_)
-        b2 = True if (s_yaw is None and g_yaw is None) else \
-             (abs(self.pi2pi(s_yaw - g_yaw)) <= self.yaw_tolerance_)
+        b1 = True if xy is None else xy <= self.xy_tolerance_
+        b2 = True if s_yaw is None and g_yaw is None else \
+             abs(self.pi2pi(s_yaw - g_yaw)) <= self.yaw_tolerance_
 
         return b1 and b2
 
@@ -184,11 +184,12 @@ class MoveToPose(Utility):
 
         self.reset()
 
-        while (not rospy.is_shutdown()):
-            if (not self.calStartAndGoal("base_footprint", "charger_frame")):
-                return False
+        while not rospy.is_shutdown():
             
             s_x, s_y, s_yaw, g_x, g_y, g_yaw = self.calStartAndGoal("base_footprint", "charger_frame")
+
+            if s_x is None:
+                return False
 
             delta_x   = g_x - s_x
             delta_y   = g_y - s_y
@@ -211,11 +212,11 @@ class MoveToPose(Utility):
             val_alpha = self.p_alpha_ * alpha
             val_beta = self.p_beta_ * beta
 
-            if (not reached_xy_tolerance):
-                if (self.isCloseToGoal(xy=rho)):
+            if not reached_xy_tolerance:
+                if self.isCloseToGoal(xy=rho):
                     reached_xy_tolerance = True
             
-            if (reached_xy_tolerance):
+            if reached_xy_tolerance:
                 sign = 1  # Default to be forward.
                 val_rho = 0  # No linear motion.
                 val_alpha = 0  # No rotating towards target point.
@@ -241,8 +242,8 @@ class MoveToPose(Utility):
 
             self.as_.publish_feedback(self.feedback_)
 
-            if (reached_xy_tolerance):
-                if (self.isCloseToGoal(s_yaw=s_yaw, g_yaw=g_yaw)):
+            if reached_xy_tolerance:
+                if self.isCloseToGoal(s_yaw=s_yaw, g_yaw=g_yaw):
                     print("Reached goal!")
                     self.pubCmdVel()
                     return True
@@ -253,13 +254,13 @@ class MoveToPose(Utility):
     def executeCB(self, goal:MoveToPoseGoal):
         print("Start move_to_pose controller.")
 
-        if (self.debug_):
+        if self.debug_:
             self.showPrams()
 
-        if (goal.start_controller):
+        if goal.start_controller:
             self.result_.is_success = self.controlToPose()
 
-            if (self.result_.is_success):
+            if self.result_.is_success:
                 self.as_.set_succeeded(self.result_)
             else:
                 self.as_.set_aborted(self.result_)
