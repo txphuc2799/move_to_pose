@@ -39,7 +39,6 @@ class MoveToPose(Utility):
         self.kd_                     = rospy.get_param("~" + "kd", 0.005)
         self.debug_                  = rospy.get_param("~" + "debug", True)
         self.last_error_             = 0.0
-        self.is_target_behind_robot_ = False
 
         # Create action server:
         self.as_ = actionlib.SimpleActionServer("move_to_pose", MoveToPoseAction,
@@ -149,11 +148,11 @@ class MoveToPose(Utility):
         goal_direction = self.pi2pi(math.atan2(g_y - s_y, g_x - s_x) - s_yaw)
 
         if (abs(goal_direction) > math.pi/2):
-            self.is_target_behind_robot_ = True
+            is_target_behind_robot_ = True
         else:
-            self.is_target_behind_robot_ = False
+            is_target_behind_robot_ = False
         
-        if (self.is_target_behind_robot_):
+        if (is_target_behind_robot_):
             goal_rotation = euler_from_quaternion([goal_pose.transform.rotation.x,
                                                    goal_pose.transform.rotation.y,
                                                    goal_pose.transform.rotation.z,
