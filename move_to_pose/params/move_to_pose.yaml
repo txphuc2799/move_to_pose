@@ -1,14 +1,14 @@
 controller_frequency: 50
 control_period: 0.01
-robot_radius: 0.57197    # 0.1993 (front)  # 0.57197 (back)
+robot_radius: 0.1993    # 0.1993 (front)  # 0.57197 (back)
 dock_displacement: 0.2
-max_linear_vel: 0.1
-max_angular_vel: 0.1
-xy_tolerance: 0.02      # pallet: 0.02 - 0.05
+max_linear_vel: 0.07
+max_angular_vel: 0.07
+xy_tolerance: 0.01      # pallet: 0.02 - 0.05
 yaw_tolerance: 0.02
 p_rho: 0.5
 p_alpha: 1.0
 p_beta: -0.2
 kp: 2.5
 kd: 0.005
-debug: true
+debug: false

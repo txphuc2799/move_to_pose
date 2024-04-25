@@ -1,5 +1,5 @@
 <launch>
-    <node pkg="move_to_pose" name="mtp_controller" type="test.py" output="screen">
+    <node pkg="move_to_pose" name="mtp_controller" type="move_to_pose.py" output="screen">
         <rosparam file="$(find move_to_pose)/params/move_to_pose.yaml" command="load"/>
         <!-- <remap from="/cmd_vel" to="/pallet_truck/smoothed_vel"/> -->
     </node>

@@ -15,6 +15,7 @@ from tf.transformations import euler_from_quaternion
 from geometry_msgs.msg import Point
 from move_to_pose_msg.msg import MoveToPoseAction, MoveToPoseFeedback, MoveToPoseResult, MoveToPoseGoal
 from utility import Utility
+from pid_controller import PIDController
 
 
 class MoveToPose(Utility):
@@ -125,8 +126,7 @@ class MoveToPose(Utility):
         dock_quaternion  = goal_pose.transform.rotation
 
         dock_matrix = np.dot(tf.transformations.translation_matrix(dock_translation),
-                             tf.transformations.quaternion_matrix([dock_quaternion.x, dock_quaternion.y,
-                                                                   dock_quaternion.z, dock_quaternion.w])) 
+                             tf.transformations.quaternion_matrix([dock_quaternion.x, dock_quaternion.y, dock_quaternion.z, dock_quaternion.w])) 
         
         origin_point = np.array([point_origin.x, point_origin.y, point_origin.z, 1])
         origin_new   = np.dot(dock_matrix, origin_point)
@@ -179,8 +179,12 @@ class MoveToPose(Utility):
         """
         Control robot to the target pose
         """
+        # Init PID Controller
         loop_controller = rospy.Rate(self.controller_frequency_)
-        
+        pid_rho = PIDController(self.control_period_, P=self.p_rho_)
+        pid_alpha = PIDController(self.control_period_, P=self.p_alpha_)
+        pid_beta = PIDController(self.control_period_, P=self.p_beta_)
+
         reached_xy_tolerance = False
 
         self.reset()
@@ -191,13 +195,9 @@ class MoveToPose(Utility):
             
             s_x, s_y, s_yaw, g_x, g_y, g_yaw = self.calStartAndGoal("base_footprint", "charger_frame")
 
-            delta_x   = g_x - s_x
-            delta_y   = g_y - s_y
-            delta_yaw = g_yaw - s_yaw 
-
-            rho = math.hypot(delta_x, delta_y)
-            alpha = self.pi2pi(math.atan2(delta_y, delta_x) - s_yaw)
-            beta = self.pi2pi(delta_yaw) - alpha
+            rho = math.hypot(g_x - s_x, g_y - s_y)
+            alpha = self.pi2pi(math.atan2(g_y - s_y, g_x - s_x) - s_yaw)
+            beta = self.pi2pi(g_yaw - s_yaw) - alpha
 
             # Check moving direction
             sign = 1
@@ -208,9 +208,9 @@ class MoveToPose(Utility):
                 sign = -1
             
             # PID Control
-            val_rho = self.p_rho_ * rho
-            val_alpha = self.p_alpha_ * alpha
-            val_beta = self.p_beta_ * beta
+            val_rho = pid_rho.compute(err=rho)[0]
+            val_alpha = pid_alpha.compute(err=alpha)[0]
+            val_beta = pid_beta.compute(err=beta)[0]
 
             if (not reached_xy_tolerance):
                 if (self.isCloseToGoal(xy=rho)):
@@ -221,7 +221,7 @@ class MoveToPose(Utility):
                 val_rho = 0  # No linear motion.
                 val_alpha = 0  # No rotating towards target point.
                 # Rotate towards target orientation.
-                val_beta = self.pi2pi(delta_yaw)
+                val_beta = self.pi2pi(g_yaw - s_yaw)
             
             # Get desired speed
             v = sign * val_rho

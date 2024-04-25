@@ -16,7 +16,7 @@ class Utility():
         self.__tf_listener = tf2_ros.TransformListener(self.__tfBuffer)
 
         # Publisher:
-        self.pub_cmd_vel_ = rospy.Publisher("cmd_vel", Twist, queue_size=5)
+        self.pubCmdVel_ = rospy.Publisher("cmd_vel", Twist, queue_size=5)
 
         # Subscribers:
         self.sub_cancel = rospy.Subscriber("CANCEL_AMR", Bool, self.sub_cancel_cb)
@@ -40,7 +40,7 @@ class Utility():
         self.is_cancel = True if msg.data else False
     
 
-    def pub_cmd_vel(self, v=0.0, w=0.0):
+    def pubCmdVel(self, v=0.0, w=0.0):
         """
         Command the robot to move, default param is STOP!
         """
@@ -58,7 +58,7 @@ class Utility():
         elif(msg.angular.x < -0.15):
             msg.angular.x = -0.15
 
-        self.pub_cmd_vel_.publish(msg)
+        self.pubCmdVel_.publish(msg)
 
 
     def pi2pi(self, theta):
