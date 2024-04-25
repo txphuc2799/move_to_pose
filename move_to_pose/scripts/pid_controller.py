@@ -41,12 +41,12 @@ class PIDController(object):
         # P
         ctrl_val += np.dot(err, self._P)
 
-        # I
-        self._err_inte += err
-        ctrl_val += self._T * np.dot(self._err_inte, self._I)
+        # # I
+        # self._err_inte += err
+        # ctrl_val += self._T * np.dot(self._err_inte, self._I)
 
-        # D
-        ctrl_val += np.dot(err-self._err_prev, self._D) / self._T
+        # # D
+        # ctrl_val += np.dot(err-self._err_prev, self._D) / self._T
 
-        self._err_prev = err
+        # self._err_prev = err
         return ctrl_val
