@@ -16,7 +16,7 @@ class Utility():
         self.__tf_listener = tf2_ros.TransformListener(self.__tfBuffer)
 
         # Publisher:
-        self.pubCmdVel_ = rospy.Publisher("cmd_vel", Twist, queue_size=5)
+        self.pub_cmd_vel_ = rospy.Publisher("cmd_vel", Twist, queue_size=5)
 
         # Subscribers:
         self.sub_cancel = rospy.Subscriber("CANCEL_AMR", Bool, self.sub_cancel_cb)
@@ -48,17 +48,19 @@ class Utility():
         msg.linear.x = v
         msg.angular.z = w
 
-        if (msg.linear.x > 0.2):
-            msg.linear.x = 0.2
-        elif(msg.linear.x < -0.2):
-            msg.linear.x = -0.2
+        msg.linear.x = self.clamp(v, 0.2, -0.2)
+        msg.angular.z = self.clamp(w, 0.15, -0.15)
 
-        if (msg.angular.x > 0.15):
-            msg.angular.x = 0.15
-        elif(msg.angular.x < -0.15):
-            msg.angular.x = -0.15
+        self.pub_cmd_vel_.publish(msg)
 
-        self.pubCmdVel_.publish(msg)
+    
+    def clamp(self, input, min, max):
+        if input > max:
+            return max
+        elif input < min:
+            return min
+        else:
+            return input
 
 
     def pi2pi(self, theta):
