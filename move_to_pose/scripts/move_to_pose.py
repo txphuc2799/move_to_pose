@@ -37,15 +37,15 @@ class MoveToPose(Utility):
         self.p_rho_                = rospy.get_param("~" + "p_rho", 0.5)
         self.p_alpha_              = rospy.get_param("~" + "p_alpha", 1.0)
         self.p_beta_               = rospy.get_param("~" + "p_beta", -0.2)
-        self.pid_linear_           = rospy.get_param("~" + "pid_linear", [0.1, 0.8, 0.0, 0.0])
-        self.pid_angular_          = rospy.get_param("~" + "pid_angular", [0.1, 1.0, 0.001, 0.2])
+        self.linear_pid_           = rospy.get_param("~" + "linear_pid", [0.1, 0.8, 0.0, 0.0])
+        self.angular_pid_          = rospy.get_param("~" + "angular_pid", [0.1, 1.0, 0.001, 0.2])
         self.debug_                = rospy.get_param("~" + "debug", True)
         self.last_error_           = 0.0
         self.is_reached_goal_      = False
 
         # Create PID controller:
-        self.pid_linear_  = PIDController(self.pid_linear_[0], self.pid_linear_[1], self.pid_linear_[2], self.pid_linear_[3])
-        self.pid_angular_ = PIDController(self.pid_angular_[0], self.pid_angular_[1], self.pid_angular_[2], self.pid_angular_[3]) 
+        self.pid_linear_  = PIDController(self.linear_pid_[0], self.linear_pid_[1], self.linear_pid_[2], self.linear_pid_[3])
+        self.pid_angular_ = PIDController(self.angular_pid_[0], self.angular_pid_[1], self.angular_pid_[2], self.angular_pid_[3]) 
 
         # Create action server:
         self.as_ = actionlib.SimpleActionServer("move_to_pose", MoveToPoseAction,
@@ -69,8 +69,8 @@ class MoveToPose(Utility):
         print("p_rho                = ", self.p_rho_)
         print("p_alpha              = ", self.p_alpha_)
         print("p_beta               = ", self.p_beta_)
-        print("pid_linear           = ", self.pid_linear_)
-        print("pid_angular          = ", self.pid_angular_)
+        print("pid_linear           = ", self.linear_pid_)
+        print("pid_angular          = ", self.angular_pid_)
         print("debug                = ", self.debug_)
         print("***********************")
     
@@ -262,10 +262,12 @@ class MoveToPose(Utility):
                 linear_error  = math.hypot(x, y) if x > 0 else -math.hypot(x, y)
                 angular_error = yaw
 
+                print(linear_error)
+
                 v = self.clamp((self.pid_linear_.compute(linear_error) - self.robot_radius_) * self.p_rho_, -self.max_linear_vel_, self.max_linear_vel_)
                 w = self.pid_angular_.compute(angular_error)
 
-                if (linear_error - self.robot_radius_) < self.stop_distance_:
+                if (abs(linear_error) - self.robot_radius_) < self.stop_distance_:
                     print("Reached goal!")
                     self.pubCmdVel()
                     return True

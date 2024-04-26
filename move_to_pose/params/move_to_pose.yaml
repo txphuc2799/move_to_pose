@@ -1,6 +1,6 @@
 controller_frequency: 50
 control_period: 0.01
-robot_radius: 0.1993    # 0.1993 (front)  # 0.57197 (back)
+robot_radius: 0.57197    # 0.1993 (front)  # 0.57197 (back)
 dock_displacement: 0.2
 stop_distance: 0.09
 max_linear_vel: 0.07
@@ -10,6 +10,6 @@ yaw_tolerance: 0.02
 p_rho: 0.5
 p_alpha: 1.0
 p_beta: -0.2
-pid_linear: [0.1, 0.8, 0.0, 0.0]      # [dt, kP, kI, kD]
-pid_angular: [0.1, 1.0, 0.001, 0.2]   # [dt, kP, kI, kD]
+linear_pid: [0.1, 0.8, 0.0, 0.0]      # [dt, kP, kI, kD]
+angular_pid: [0.1, 1.0, 0.001, 0.2]   # [dt, kP, kI, kD]
 debug: true
