@@ -69,8 +69,8 @@ class MoveToPose(Utility):
         print("p_rho                = ", self.p_rho_)
         print("p_alpha              = ", self.p_alpha_)
         print("p_beta               = ", self.p_beta_)
-        print("kp                   = ", self.kp_)
-        print("kd                   = ", self.kd_)
+        print("pid_linear           = ", self.pid_linear_)
+        print("pid_angular          = ", self.pid_angular_)
         print("debug                = ", self.debug_)
         print("***********************")
     
