@@ -273,12 +273,6 @@ class MoveToPose(Utility):
             # Publish speed
             self.pubCmdVel(v, w)
 
-            print(f"Remaning distance: {rho:.2f}m")
-
-            self.feedback_.remaining_distance = round(rho, 2)
-
-            self.as_.publish_feedback(self.feedback_)
-
             loop_controller.sleep()
 
     
