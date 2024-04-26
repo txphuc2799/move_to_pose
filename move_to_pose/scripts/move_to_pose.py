@@ -262,8 +262,6 @@ class MoveToPose(Utility):
                 linear_error  = math.hypot(x, y) if x > 0 else -math.hypot(x, y)
                 angular_error = yaw
 
-                print((self.pid_linear_.compute(linear_error) - self.robot_radius_) * self.p_rho_)
-
                 v = self.clamp((self.pid_linear_.compute(linear_error) - self.robot_radius_) * self.p_rho_, -self.max_linear_vel_, self.max_linear_vel_)
                 w = self.pid_angular_.compute(angular_error)
 
