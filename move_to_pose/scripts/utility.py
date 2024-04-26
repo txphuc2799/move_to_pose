@@ -3,8 +3,6 @@ import math
 import tf2_ros
 
 from typing import Tuple
-from geometry_msgs.msg import Twist
-from std_msgs.msg import Bool
 
 Pose2D = Tuple[float, float, float]
 
@@ -14,39 +12,6 @@ class Utility():
         # Create_subscriber to tf broadcaster
         self.__tfBuffer = tf2_ros.Buffer(cache_time=rospy.Duration(5.0))
         self.__tf_listener = tf2_ros.TransformListener(self.__tfBuffer)
-
-        # Publisher:
-        self.pub_cmd_vel_ = rospy.Publisher("cmd_vel", Twist, queue_size=5)
-
-        # Subscribers:
-        self.sub_cancel = rospy.Subscriber("CANCEL_AMR", Bool, self.sub_cancel_cb)
-        self.sub_pause  = rospy.Subscriber("PAUSE_AMR", Bool, self.sub_pause_cb)
-
-        # Variables:
-        self.is_cancel = False
-        self.is_pause  = False
-
-
-    def sub_pause_cb(self, msg):
-        self.is_pause = True if msg.data else False
-        
-    
-    def sub_cancel_cb(self, msg):
-        self.is_cancel = True if msg.data else False
-    
-
-    def pubCmdVel(self, v=0.0, w=0.0):
-        """
-        Command the robot to move, default param is STOP!
-        """
-        msg = Twist()
-        msg.linear.x = v
-        msg.angular.z = w
-
-        msg.linear.x = self.clamp(v, -0.2, 0.2)
-        msg.angular.z = self.clamp(w, -0.15, 0.15)
-
-        self.pub_cmd_vel_.publish(msg)
 
     
     def clamp(self, input, min, max):

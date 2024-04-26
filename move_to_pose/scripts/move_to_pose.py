@@ -13,6 +13,8 @@ import actionlib
 
 from tf.transformations import euler_from_quaternion
 from geometry_msgs.msg import Point
+from geometry_msgs.msg import Twist
+from std_msgs.msg import Bool
 from move_to_pose_msg.msg import MoveToPoseAction, MoveToPoseFeedback, MoveToPoseResult, MoveToPoseGoal
 from utility import Utility
 from pid_controller import PIDController
@@ -40,8 +42,9 @@ class MoveToPose(Utility):
         self.linear_pid_           = rospy.get_param("~" + "linear_pid", [0.1, 0.8, 0.0, 0.0])
         self.angular_pid_          = rospy.get_param("~" + "angular_pid", [0.1, 1.0, 0.001, 0.2])
         self.debug_                = rospy.get_param("~" + "debug", True)
-        self.last_error_           = 0.0
         self.is_reached_goal_      = False
+        self.is_cancel             = False
+        self.is_pause              = False
 
         # Create PID controller:
         self.pid_linear_  = PIDController(self.linear_pid_[0], self.linear_pid_[1], self.linear_pid_[2], self.linear_pid_[3])
@@ -54,6 +57,13 @@ class MoveToPose(Utility):
 
         self.feedback_ = MoveToPoseFeedback()
         self.result_   = MoveToPoseResult()
+    
+        # Publisher:
+        self.pub_cmd_vel_ = rospy.Publisher("cmd_vel", Twist, queue_size=5)
+
+        # Subscribers:
+        self.sub_cancel = rospy.Subscriber("CANCEL_AMR", Bool, self.cancelCB)
+        self.sub_pause  = rospy.Subscriber("PAUSE_AMR", Bool, self.pauseCB)
     
 
     def showPrams(self):
@@ -79,6 +89,25 @@ class MoveToPose(Utility):
         self.is_cancel = False
         self.is_pause  = False
         self.is_reached_goal_ = False
+
+    
+    def pauseCB(self, msg:Bool):
+        self.is_pause = True if msg.data else False
+        
+    
+    def cancelCB(self, msg:Bool):
+        self.is_cancel = True if msg.data else False
+    
+
+    def pubCmdVel(self, v=0.0, w=0.0):
+        msg = Twist()
+        msg.linear.x = v
+        msg.angular.z = w
+
+        msg.linear.x = self.clamp(v, -0.2, 0.2)
+        msg.angular.z = self.clamp(w, -0.15, 0.15)
+
+        self.pub_cmd_vel_.publish(msg)
     
 
     def getRotationAngle(self, p1, p2):
