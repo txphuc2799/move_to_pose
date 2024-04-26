@@ -24,21 +24,21 @@ class MoveToPose(Utility):
         super().__init__()
 
         # Init params:
-        self.robot_radius_           = rospy.get_param("~" + "robot_radius", 0.1993)
-        self.dock_displacement_      = rospy.get_param("~" + "dock_displacement", 0.1)
-        self.max_linear_vel_         = rospy.get_param("~" + "max_linear_vel", 0.05)
-        self.max_angular_vel_        = rospy.get_param("~" + "max_angular_vel", 0.05)
-        self.xy_tolerance_           = rospy.get_param("~" + "xy_tolerance", 0.015)
-        self.yaw_tolerance_          = rospy.get_param("~" + "yaw_tolerance", 0.03)
-        self.control_period_         = rospy.get_param("~" + "control_period", 0.01)
-        self.controller_frequency_   = rospy.get_param("~" + "controller_frequency", 20)
-        self.p_rho_                  = rospy.get_param("~" + "p_rho", 0.5)
-        self.p_alpha_                = rospy.get_param("~" + "p_alpha", 1.0)
-        self.p_beta_                 = rospy.get_param("~" + "p_beta", -0.2)
-        self.kp_                     = rospy.get_param("~" + "kp", 2.5)
-        self.kd_                     = rospy.get_param("~" + "kd", 0.005)
-        self.debug_                  = rospy.get_param("~" + "debug", True)
-        self.last_error_             = 0.0
+        self.robot_radius_         = rospy.get_param("~" + "robot_radius", 0.1993)
+        self.dock_displacement_    = rospy.get_param("~" + "dock_displacement", 0.1)
+        self.max_linear_vel_       = rospy.get_param("~" + "max_linear_vel", 0.05)
+        self.max_angular_vel_      = rospy.get_param("~" + "max_angular_vel", 0.05)
+        self.xy_tolerance_         = rospy.get_param("~" + "xy_tolerance", 0.015)
+        self.yaw_tolerance_        = rospy.get_param("~" + "yaw_tolerance", 0.03)
+        self.control_period_       = rospy.get_param("~" + "control_period", 0.01)
+        self.controller_frequency_ = rospy.get_param("~" + "controller_frequency", 20)
+        self.p_rho_                = rospy.get_param("~" + "p_rho", 0.5)
+        self.p_alpha_              = rospy.get_param("~" + "p_alpha", 1.0)
+        self.p_beta_               = rospy.get_param("~" + "p_beta", -0.2)
+        self.kp_                   = rospy.get_param("~" + "kp", 2.5)
+        self.kd_                   = rospy.get_param("~" + "kd", 0.005)
+        self.debug_                = rospy.get_param("~" + "debug", True)
+        self.last_error_           = 0.0
 
         # Create action server:
         self.as_ = actionlib.SimpleActionServer("move_to_pose", MoveToPoseAction,
@@ -50,6 +50,7 @@ class MoveToPose(Utility):
     
 
     def showPrams(self):
+        print("***********************")
         print("robot_radius         = ", self.robot_radius_)
         print("dock_displacement    = ", self.dock_displacement_)
         print("max_linear_vel       = ", self.max_linear_vel_)
@@ -64,7 +65,7 @@ class MoveToPose(Utility):
         print("kp                   = ", self.kp_)
         print("kd                   = ", self.kd_)
         print("debug                = ", self.debug_)
-
+        print("***********************")
 
     def PIDcontroller(self, dis_y):
         e_D = dis_y - self.last_error_

@@ -11,4 +11,4 @@ p_alpha: 1.0
 p_beta: -0.2
 kp: 2.5
 kd: 0.005
-debug: false
+debug: true
