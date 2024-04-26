@@ -48,8 +48,8 @@ class Utility():
         msg.linear.x = v
         msg.angular.z = w
 
-        msg.linear.x = self.clamp(v, 0.2, -0.2)
-        msg.angular.z = self.clamp(w, 0.15, -0.15)
+        msg.linear.x = self.clamp(v, -0.2, 0.2)
+        msg.angular.z = self.clamp(w, -0.15, 0.15)
 
         self.pub_cmd_vel_.publish(msg)
 
