@@ -37,15 +37,15 @@ class MoveToPose(Utility):
         self.p_rho_                = rospy.get_param("~" + "p_rho", 0.5)
         self.p_alpha_              = rospy.get_param("~" + "p_alpha", 1.0)
         self.p_beta_               = rospy.get_param("~" + "p_beta", -0.2)
-        self.kp_                   = rospy.get_param("~" + "kp", 2.5)
-        self.kd_                   = rospy.get_param("~" + "kd", 0.005)
+        self.pid_linear_           = rospy.get_param("~" + "pid_linear", [0.1, 0.8, 0.0, 0.0])
+        self.pid_angular_          = rospy.get_param("~" + "pid_angular", [0.1, 1.0, 0.001, 0.2])
         self.debug_                = rospy.get_param("~" + "debug", True)
         self.last_error_           = 0.0
         self.is_reached_goal_      = False
 
         # Create PID controller:
-        self.pid_linear_  = PIDController(0.1, 1.0, 0.0, 0.0)
-        self.pid_angular_ = PIDController(0.1, 1.0, 0.0, 0.0) 
+        self.pid_linear_  = PIDController(self.pid_linear_[0], self.pid_linear_[1], self.pid_linear_[2], self.pid_linear_[3])
+        self.pid_angular_ = PIDController(self.pid_angular_[0], self.pid_angular_[1], self.pid_angular_[2], self.pid_angular_[3]) 
 
         # Create action server:
         self.as_ = actionlib.SimpleActionServer("move_to_pose", MoveToPoseAction,
@@ -73,13 +73,6 @@ class MoveToPose(Utility):
         print("kd                   = ", self.kd_)
         print("debug                = ", self.debug_)
         print("***********************")
-
-    def PIDcontroller(self, dis_y):
-        e_D = dis_y - self.last_error_
-        angle = self.kp_*dis_y + self.kd_*e_D
-        self.last_error_ = dis_y
-        
-        return angle
     
 
     def reset(self):
@@ -269,13 +262,15 @@ class MoveToPose(Utility):
                 linear_error  = math.hypot(x, y) if x > 0 else -math.hypot(x, y)
                 angular_error = yaw
 
-                v = self.clamp(self.pid_linear_.compute(linear_error) * self.p_rho_, -self.max_linear_vel_, self.max_linear_vel_)
+                print((self.pid_linear_.compute(linear_error) - self.robot_radius_) * self.p_rho_)
+
+                v = self.clamp((self.pid_linear_.compute(linear_error) - self.robot_radius_) * self.p_rho_, -self.max_linear_vel_, self.max_linear_vel_)
                 w = self.pid_angular_.compute(angular_error)
 
                 if (linear_error - self.robot_radius_) < self.stop_distance_:
                     print("Reached goal!")
                     self.pubCmdVel()
-                    break
+                    return True
             
             # Publish speed
             self.pubCmdVel(v, w)
