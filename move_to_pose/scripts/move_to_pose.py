@@ -15,6 +15,7 @@ from tf.transformations import euler_from_quaternion
 from geometry_msgs.msg import Point
 from move_to_pose_msg.msg import MoveToPoseAction, MoveToPoseFeedback, MoveToPoseResult, MoveToPoseGoal
 from utility import Utility
+from pid_controller import PIDController
 
 
 class MoveToPose(Utility):
@@ -39,6 +40,11 @@ class MoveToPose(Utility):
         self.kd_                   = rospy.get_param("~" + "kd", 0.005)
         self.debug_                = rospy.get_param("~" + "debug", True)
         self.last_error_           = 0.0
+        self.is_reached_goal_      = False
+
+        # Create PID controller:
+        self.pid_linear_  = PIDController(0.1, 1.0, 0.0, 0.0)
+        self.pid_angular_ = PIDController(0.1, 1.0, 0.0, 0.0) 
 
         # Create action server:
         self.as_ = actionlib.SimpleActionServer("move_to_pose", MoveToPoseAction,
@@ -73,6 +79,12 @@ class MoveToPose(Utility):
         self.last_error_ = dis_y
         
         return angle
+    
+
+    def reset(self):
+        self.is_cancel = False
+        self.is_pause  = False
+        self.is_reached_goal_ = False
     
 
     def getRotationAngle(self, p1, p2):
@@ -187,67 +199,95 @@ class MoveToPose(Utility):
 
         while not rospy.is_shutdown():
             
-            s_x, s_y, s_yaw, g_x, g_y, g_yaw = self.calStartAndGoal("base_footprint", "charger_frame")
+            if not self.is_reached_goal_:
+                s_x, s_y, s_yaw, g_x, g_y, g_yaw = self.calStartAndGoal("base_footprint", "charger_frame")
 
-            if s_x is None:
-                return False
+                if s_x is None:
+                    return False
 
-            delta_x   = g_x - s_x
-            delta_y   = g_y - s_y
-            delta_yaw = g_yaw - s_yaw 
+                delta_x   = g_x - s_x
+                delta_y   = g_y - s_y
+                delta_yaw = g_yaw - s_yaw 
 
-            rho = math.hypot(delta_x, delta_y)
-            alpha = self.pi2pi(math.atan2(delta_y, delta_x) - s_yaw)
-            beta = self.pi2pi(delta_yaw) - alpha
+                rho = math.hypot(delta_x, delta_y)
+                alpha = self.pi2pi(math.atan2(delta_y, delta_x) - s_yaw)
+                beta = self.pi2pi(delta_yaw) - alpha
 
-            # Check moving direction
-            sign = 1
-            # Check whether the goal is behind robot
-            if (abs(alpha) > math.pi/2):    # The goal is behind robot
-                alpha = self.pi2pi(math.pi - alpha)
-                beta = self.pi2pi(math.pi - beta)
-                sign = -1
-            
-            # PID Control
-            val_rho = self.p_rho_ * rho
-            val_alpha = self.p_alpha_ * alpha
-            val_beta = self.p_beta_ * beta
+                # Check moving direction
+                sign = 1
+                # Check whether the goal is behind robot
+                if (abs(alpha) > math.pi/2):    # The goal is behind robot
+                    alpha = self.pi2pi(math.pi - alpha)
+                    beta = self.pi2pi(math.pi - beta)
+                    sign = -1
+                
+                # PID Control
+                val_rho = self.p_rho_ * rho
+                val_alpha = self.p_alpha_ * alpha
+                val_beta = self.p_beta_ * beta
 
-            if not reached_xy_tolerance:
-                if self.isCloseToGoal(xy=rho):
-                    reached_xy_tolerance = True
-            
-            if reached_xy_tolerance:
-                sign = 1  # Default to be forward.
-                val_rho = 0  # No linear motion.
-                val_alpha = 0  # No rotating towards target point.
-                # Rotate towards target orientation.
-                val_beta = self.pi2pi(delta_yaw)
-            
-            # Get desired speed
-            v = sign * val_rho
-            w = sign * (val_alpha + val_beta)
+                if not reached_xy_tolerance:
+                    if self.isCloseToGoal(xy=rho):
+                        reached_xy_tolerance = True
+                
+                if reached_xy_tolerance:
+                    sign = 1  # Default to be forward.
+                    val_rho = 0  # No linear motion.
+                    val_alpha = 0  # No rotating towards target point.
+                    # Rotate towards target orientation.
+                    val_beta = self.pi2pi(delta_yaw)
+                
+                # Get desired speed
+                v = sign * val_rho
+                w = sign * (val_alpha + val_beta)
 
-            # Threshold on velocity
-            v = min(abs(v), self.max_linear_vel_) * \
-                (1 if v > 0 else -1)  # limit v
-            w = min(abs(w), self.max_angular_vel_) * \
-                (1 if w > 0 else -1)  # limit w
-            
-            # Publish speed
-            self.pubCmdVel(v, w)
+                # Threshold on velocity
+                v = min(abs(v), self.max_linear_vel_) * \
+                    (1 if v > 0 else -1)  # limit v
+                w = min(abs(w), self.max_angular_vel_) * \
+                    (1 if w > 0 else -1)  # limit w
+                
+                # Publish speed
+                self.pubCmdVel(v, w)
 
-            print(f"Remaning distance: {rho:.2f}m")
+                print(f"Remaning distance: {rho:.2f}m")
 
-            self.feedback_.remaining_distance = round(rho, 2)
+                self.feedback_.remaining_distance = round(rho, 2)
 
-            self.as_.publish_feedback(self.feedback_)
+                self.as_.publish_feedback(self.feedback_)
 
-            if reached_xy_tolerance:
-                if self.isCloseToGoal(s_yaw=s_yaw, g_yaw=g_yaw):
-                    print("Reached goal!")
+                if reached_xy_tolerance:
+                    if self.isCloseToGoal(s_yaw=s_yaw, g_yaw=g_yaw):
+                        print("Reached goal!")
+                        self.is_reached_goal_ = True
+                        self.pubCmdVel()
+            else:
+                dock_pose = self.get_2D_pose("charger_frame", "base_footprint")
+
+                if dock_pose is None:
+                    return False
+                
+                x = dock_pose.transform.translation.x
+                y = dock_pose.transform.translation.y
+                rotation = euler_from_quaternion([dock_pose.transform.rotation.x,
+                                                  dock_pose.transform.rotation.y,
+                                                  dock_pose.transform.rotation.z,
+                                                  dock_pose.transform.rotation.w])
+                
+                yaw = rotation[2] if x < 0 else self.flip_yaw(rotation[2])
+
+                linear_error  = math.hypot(x, y) if x > 0 else -math.hypot(x, y)
+                angular_error = yaw
+
+                linear_speed = self.clamp(self.pid_linear_.compute(linear_error))
+                angular_speed = self.pid_angular_.compute(angular_error)
+
+                self.pubCmdVel(v=linear_speed, w=angular_speed)
+
+                if linear_error < 0.05:
+                    print("Success")
                     self.pubCmdVel()
-                    return True
+                    break
 
             loop_controller.sleep()
 

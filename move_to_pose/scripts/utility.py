@@ -26,11 +26,6 @@ class Utility():
         self.is_cancel = False
         self.is_pause  = False
 
-    
-    def reset(self):
-        self.is_cancel = False
-        self.is_pause  = False
-
 
     def sub_pause_cb(self, msg):
         self.is_pause = True if msg.data else False
@@ -65,6 +60,18 @@ class Utility():
 
     def pi2pi(self, theta):
         return (theta + math.pi) % (2 * math.pi) - math.pi
+    
+
+    def flip_yaw(self, yaw: float) -> float:
+        """
+        Flip yaw angle by 180 degree, input yaw range should be within
+        [-pi, pi] radian. Else use set_angle() fn to fix the convention.
+        Output will also be within the same range of [-pi, pi] radian.
+        """
+        if yaw >= 0:
+            return yaw - math.pi
+        else:
+            return yaw + math.pi
     
 
     def get_2D_pose(self, target_link=None, base_link=None):
