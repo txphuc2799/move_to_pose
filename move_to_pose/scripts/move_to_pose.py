@@ -27,6 +27,7 @@ class MoveToPose(Utility):
         # Init params:
         self.robot_radius_         = rospy.get_param("~" + "robot_radius", 0.1993)
         self.dock_displacement_    = rospy.get_param("~" + "dock_displacement", 0.1)
+        self.stop_distance_        = rospy.get_param("~" + "stop_distance", 0.05)
         self.max_linear_vel_       = rospy.get_param("~" + "max_linear_vel", 0.05)
         self.max_angular_vel_      = rospy.get_param("~" + "max_angular_vel", 0.05)
         self.xy_tolerance_         = rospy.get_param("~" + "xy_tolerance", 0.015)
@@ -246,21 +247,10 @@ class MoveToPose(Utility):
                     (1 if v > 0 else -1)  # limit v
                 w = min(abs(w), self.max_angular_vel_) * \
                     (1 if w > 0 else -1)  # limit w
-                
-                # Publish speed
-                self.pubCmdVel(v, w)
-
-                print(f"Remaning distance: {rho:.2f}m")
-
-                self.feedback_.remaining_distance = round(rho, 2)
-
-                self.as_.publish_feedback(self.feedback_)
 
                 if reached_xy_tolerance:
                     if self.isCloseToGoal(s_yaw=s_yaw, g_yaw=g_yaw):
-                        print("Reached goal!")
                         self.is_reached_goal_ = True
-                        self.pubCmdVel()
             else:
                 dock_pose = self.get_2D_pose("charger_frame", "base_footprint")
 
@@ -279,15 +269,22 @@ class MoveToPose(Utility):
                 linear_error  = math.hypot(x, y) if x > 0 else -math.hypot(x, y)
                 angular_error = yaw
 
-                linear_speed = self.clamp(self.pid_linear_.compute(linear_error))
-                angular_speed = self.pid_angular_.compute(angular_error)
+                v = self.clamp(self.pid_linear_.compute(linear_error) * self.p_rho_, -self.max_linear_vel_, self.max_linear_vel_)
+                w = self.pid_angular_.compute(angular_error)
 
-                self.pubCmdVel(v=linear_speed, w=angular_speed)
-
-                if linear_error < 0.05:
-                    print("Success")
+                if (linear_error - self.robot_radius_) < self.stop_distance_:
+                    print("Reached goal!")
                     self.pubCmdVel()
                     break
+            
+            # Publish speed
+            self.pubCmdVel(v, w)
+
+            print(f"Remaning distance: {rho:.2f}m")
+
+            self.feedback_.remaining_distance = round(rho, 2)
+
+            self.as_.publish_feedback(self.feedback_)
 
             loop_controller.sleep()
 
