@@ -64,8 +64,8 @@ class MoveToPose(Utility):
         self.pub_cmd_vel_ = rospy.Publisher("cmd_vel", Twist, queue_size=5)
 
         # Subscribers:
-        self.sub_cancel = rospy.Subscriber("CANCEL_AMR", Bool, self.cancelCB)
-        self.sub_pause  = rospy.Subscriber("PAUSE_AMR", Bool, self.pauseCB)
+        rospy.Subscriber("CANCEL_AMR", Bool, self.cancelCB)
+        rospy.Subscriber("PAUSE_AMR", Bool, self.pauseCB)
     
 
     def showPrams(self):
@@ -290,15 +290,19 @@ class MoveToPose(Utility):
                 
                 yaw = rotation[2] if x < 0 else self.flip_yaw(rotation[2])
 
-                linear_error  = math.hypot(x, y) if x > 0 else -math.hypot(x, y)
-                angular_error = yaw
+                if x > 0:
+                    rho_error = math.hypot(x, y)
+                    sign = 1
+                else:
+                    rho_error = -math.hypot(x, y)
+                    sign = -1
 
-                print(linear_error)
+                angle_error = yaw
 
-                v = self.clamp((self.pid_linear_.compute(linear_error) - self.robot_radius_) * self.p_rho_, -self.max_linear_vel_, self.max_linear_vel_)
-                w = self.pid_angular_.compute(angular_error)
+                v = self.clamp((self.pid_linear_.compute(rho_error)- self.robot_radius_) * self.p_rho_, -self.max_linear_vel_, self.max_linear_vel_)
+                w = self.pid_angular_.compute(angle_error)
 
-                if (abs(linear_error) - self.robot_radius_) < self.stop_distance_:
+                if (abs(rho_error) - self.robot_radius_) < self.stop_distance_:
                     print("Reached goal!")
                     self.pubCmdVel()
                     return True
