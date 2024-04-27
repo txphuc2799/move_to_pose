@@ -1,6 +1,6 @@
 controller_frequency: 50
 control_period: 0.01
-robot_radius: 0.57197    # 0.1993 (front)  # 0.57197 (back)
+robot_radius: 0.1993    # 0.1993 (front)  # 0.57197 (back)
 dock_displacement: 0.4
 stop_distance: 0.09
 max_linear_vel: 0.07

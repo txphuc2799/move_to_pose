@@ -290,13 +290,9 @@ class MoveToPose(Utility):
                 
                 yaw = rotation[2] if x < 0 else self.flip_yaw(rotation[2])
 
-                if x > 0:
-                    rho_error = math.hypot(x, y)
-                    sign = 1
-                else:
-                    rho_error = -math.hypot(x, y)
-                    sign = -1
+                sign = 1 if x > 0 else -1
 
+                rho_error   = sign * math.hypot(x, y)
                 angle_error = yaw
 
                 v = self.clamp((self.pid_linear_.compute(rho_error) - sign * self.robot_radius_) * self.p_rho_,
