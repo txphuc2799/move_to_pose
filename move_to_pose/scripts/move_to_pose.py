@@ -32,6 +32,8 @@ class MoveToPose(Utility):
         self.stop_distance_        = rospy.get_param("~" + "stop_distance", 0.05)
         self.max_linear_vel_       = rospy.get_param("~" + "max_linear_vel", 0.05)
         self.max_angular_vel_      = rospy.get_param("~" + "max_angular_vel", 0.05)
+        self.limited_linear_vel_   = rospy.get_param("~" + "limited_linear_vel", 0.2)
+        self.limited_angular_vel_  = rospy.get_param("~" + "limited_angular_vel", 0.15)
         self.xy_tolerance_         = rospy.get_param("~" + "xy_tolerance", 0.015)
         self.yaw_tolerance_        = rospy.get_param("~" + "yaw_tolerance", 0.03)
         self.control_period_       = rospy.get_param("~" + "control_period", 0.01)
@@ -104,8 +106,8 @@ class MoveToPose(Utility):
         msg.linear.x = v
         msg.angular.z = w
 
-        msg.linear.x = self.clamp(v, -0.2, 0.2)
-        msg.angular.z = self.clamp(w, -0.15, 0.15)
+        msg.linear.x = self.clamp(v, -self.limited_linear_vel_, self.limited_linear_vel_)
+        msg.angular.z = self.clamp(w, -self.limited_angular_vel_, self.limited_angular_vel_)
 
         self.pub_cmd_vel_.publish(msg)
     

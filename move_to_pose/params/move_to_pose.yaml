@@ -5,6 +5,8 @@ dock_displacement: 0.2
 stop_distance: 0.09
 max_linear_vel: 0.07
 max_angular_vel: 0.07
+limited_linear_vel: 0.2
+limited_angular_vel: 0.15
 xy_tolerance: 0.01      # pallet: 0.02 - 0.05
 yaw_tolerance: 0.02
 p_rho: 0.5
