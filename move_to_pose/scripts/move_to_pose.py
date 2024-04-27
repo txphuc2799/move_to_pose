@@ -41,15 +41,14 @@ class MoveToPose(Utility):
         self.p_rho_                = rospy.get_param("~" + "p_rho", 0.5)
         self.p_alpha_              = rospy.get_param("~" + "p_alpha", 1.0)
         self.p_beta_               = rospy.get_param("~" + "p_beta", -0.2)
-        self.linear_pid_           = rospy.get_param("~" + "linear_pid", [0.1, 0.8, 0.0, 0.0])
         self.angular_pid_          = rospy.get_param("~" + "angular_pid", [0.1, 1.0, 0.001, 0.2])
         self.debug_                = rospy.get_param("~" + "debug", True)
         self.is_reached_goal_      = False
+        self.reached_xy_tolerance_ = False
         self.is_cancel             = False
         self.is_pause              = False
 
         # Create PID controller:
-        self.pid_linear_  = PIDController(self.linear_pid_[0], self.linear_pid_[1], self.linear_pid_[2], self.linear_pid_[3])
         self.pid_angular_ = PIDController(self.angular_pid_[0], self.angular_pid_[1], self.angular_pid_[2], self.angular_pid_[3]) 
 
         # Create action server:
@@ -68,7 +67,7 @@ class MoveToPose(Utility):
         rospy.Subscriber("PAUSE_AMR", Bool, self.pauseCB)
     
 
-    def showPrams(self):
+    def showParams(self):
         print("***********************")
         print("robot_radius         = ", self.robot_radius_)
         print("dock_displacement    = ", self.dock_displacement_)
@@ -81,7 +80,6 @@ class MoveToPose(Utility):
         print("p_rho                = ", self.p_rho_)
         print("p_alpha              = ", self.p_alpha_)
         print("p_beta               = ", self.p_beta_)
-        print("pid_linear           = ", self.linear_pid_)
         print("pid_angular          = ", self.angular_pid_)
         print("debug                = ", self.debug_)
         print("***********************")
@@ -91,6 +89,7 @@ class MoveToPose(Utility):
         self.is_cancel = False
         self.is_pause  = False
         self.is_reached_goal_ = False
+        self.reached_xy_tolerance_ = False
 
     
     def pauseCB(self, msg:Bool):
@@ -217,8 +216,6 @@ class MoveToPose(Utility):
         Control robot to the target pose
         """
         loop_controller = rospy.Rate(self.controller_frequency_)
-        
-        reached_xy_tolerance = False
 
         self.reset()
 
@@ -251,11 +248,11 @@ class MoveToPose(Utility):
                 val_alpha = self.p_alpha_ * alpha
                 val_beta = self.p_beta_ * beta
 
-                if not reached_xy_tolerance:
+                if not self.reached_xy_tolerance_:
                     if self.isCloseToGoal(xy=rho):
-                        reached_xy_tolerance = True
+                        self.reached_xy_tolerance_ = True
                 
-                if reached_xy_tolerance:
+                if self.reached_xy_tolerance_:
                     sign = 1  # Default to be forward.
                     val_rho = 0  # No linear motion.
                     val_alpha = 0  # No rotating towards target point.
@@ -266,13 +263,7 @@ class MoveToPose(Utility):
                 v = sign * val_rho
                 w = sign * (val_alpha + val_beta)
 
-                # Threshold on velocity
-                v = min(abs(v), self.max_linear_vel_) * \
-                    (1 if v > 0 else -1)  # limit v
-                w = min(abs(w), self.max_angular_vel_) * \
-                    (1 if w > 0 else -1)  # limit w
-
-                if reached_xy_tolerance:
+                if self.reached_xy_tolerance_:
                     if self.isCloseToGoal(s_yaw=s_yaw, g_yaw=g_yaw):
                         self.is_reached_goal_ = True
             else:
@@ -292,17 +283,21 @@ class MoveToPose(Utility):
 
                 sign = 1 if x > 0 else -1
 
-                rho_error   = sign * math.hypot(x, y)
-                angle_error = yaw
+                val_rho = (math.hypot(x, y) - self.robot_radius_) * self.p_rho_
 
-                v = self.clamp((self.pid_linear_.compute(rho_error) - sign * self.robot_radius_) * self.p_rho_,
-                               -self.max_linear_vel_, self.max_linear_vel_)
-                w = self.pid_angular_.compute(angle_error)
+                v = sign * val_rho
+                w = self.pid_angular_.compute(yaw)
 
-                if (abs(rho_error) - self.robot_radius_) < self.stop_distance_:
+                if (val_rho / self.p_rho_) < self.stop_distance_:
                     print("Reached goal!")
                     self.pubCmdVel()
                     return True
+                
+            # Threshold on velocity
+            v = min(abs(v), self.max_linear_vel_) * \
+                (1 if v > 0 else -1)  # limit v
+            w = min(abs(w), self.max_angular_vel_) * \
+                (1 if w > 0 else -1)  # limit w
             
             # Publish speed
             self.pubCmdVel(v, w)
@@ -314,7 +309,7 @@ class MoveToPose(Utility):
         print("Start move_to_pose controller.")
 
         if self.debug_:
-            self.showPrams()
+            self.showParams()
 
         if goal.start_controller:
             self.result_.is_success = self.controlToPose()
