@@ -299,7 +299,8 @@ class MoveToPose(Utility):
 
                 angle_error = yaw
 
-                v = self.clamp((self.pid_linear_.compute(rho_error)- self.robot_radius_) * self.p_rho_, -self.max_linear_vel_, self.max_linear_vel_)
+                v = self.clamp((self.pid_linear_.compute(rho_error) - sign * self.robot_radius_) * self.p_rho_,
+                               -self.max_linear_vel_, self.max_linear_vel_)
                 w = self.pid_angular_.compute(angle_error)
 
                 if (abs(rho_error) - self.robot_radius_) < self.stop_distance_:
