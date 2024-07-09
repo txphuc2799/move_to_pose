@@ -27,6 +27,9 @@ class MoveToPose(Utility):
         super().__init__()
 
         # Init params:
+        self.cmd_vel_topic_        = rospy.get_param("~" + "cmd_vel_topic", "cmd_vel")
+        self.target_frame_         = rospy.get_param("~" + "target_frame", "tag_frame")
+        self.base_frame_           = rospy.get_param("~" + "base_frame", "base_footprint")
         self.robot_radius_         = rospy.get_param("~" + "robot_radius", 0.1993)
         self.dock_displacement_    = rospy.get_param("~" + "dock_displacement", 0.1)
         self.stop_distance_        = rospy.get_param("~" + "stop_distance", 0.05)
@@ -60,7 +63,7 @@ class MoveToPose(Utility):
         self.result_   = MoveToPoseResult()
     
         # Publisher:
-        self.pub_cmd_vel_ = rospy.Publisher("cmd_vel", Twist, queue_size=5)
+        self.pub_cmd_vel_ = rospy.Publisher(self.cmd_vel_topic_, Twist, queue_size=5)
 
         # Subscribers:
         rospy.Subscriber("CANCEL_AMR", Bool, self.cancelCB)
@@ -69,6 +72,9 @@ class MoveToPose(Utility):
 
     def showParams(self):
         print("***********************")
+        print("cmd_vel_topic        = ", self.cmd_vel_topic_)
+        print("base_frame           = ", self.base_frame_)
+        print("target_frame         = ", self.target_frame_)
         print("robot_radius         = ", self.robot_radius_)
         print("dock_displacement    = ", self.dock_displacement_)
         print("max_linear_vel       = ", self.max_linear_vel_)
@@ -222,7 +228,7 @@ class MoveToPose(Utility):
         while not rospy.is_shutdown():
             
             if not self.is_reached_goal_:
-                s_x, s_y, s_yaw, g_x, g_y, g_yaw = self.calStartAndGoal("base_footprint", "charger_frame")
+                s_x, s_y, s_yaw, g_x, g_y, g_yaw = self.calStartAndGoal(self.base_frame_, self.target_frame_)
 
                 if s_x is None:
                     return False
@@ -250,6 +256,7 @@ class MoveToPose(Utility):
 
                 if not self.reached_xy_tolerance_:
                     if self.isCloseToGoal(xy=rho):
+                        print("Reached xy!")
                         self.reached_xy_tolerance_ = True
                 
                 if self.reached_xy_tolerance_:
@@ -267,10 +274,15 @@ class MoveToPose(Utility):
                     if self.isCloseToGoal(s_yaw=s_yaw, g_yaw=g_yaw):
                         self.is_reached_goal_ = True
             else:
-                dock_pose = self.get_2D_pose("charger_frame", "base_footprint")
+                dock_pose = self.get_2D_pose(self.target_frame_, self.base_frame_)
 
+                # if dock_pose is None:
+                #     return False
+                
                 if dock_pose is None:
-                    return False
+                    print("Reached goal!")
+                    self.pubCmdVel()
+                    return True
                 
                 x = dock_pose.transform.translation.x
                 y = dock_pose.transform.translation.y
@@ -288,10 +300,10 @@ class MoveToPose(Utility):
                 v = sign * val_rho
                 w = self.pid_angular_.compute(yaw)
 
-                if (val_rho / self.p_rho_) < self.stop_distance_:
-                    print("Reached goal!")
-                    self.pubCmdVel()
-                    return True
+                # if (val_rho / self.p_rho_) < self.stop_distance_:
+                #     print("Reached goal!")
+                #     self.pubCmdVel()
+                #     return True
                 
             # Threshold on velocity
             v = min(abs(v), self.max_linear_vel_) * \

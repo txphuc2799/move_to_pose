@@ -1,14 +1,17 @@
 controller_frequency: 50
 control_period: 0.01
-robot_radius: 0.1993    # 0.1993 (front)  # 0.57197 (back)
-dock_displacement: 0.4
+target_frame: tag_frame
+base_frame: base_footprint
+cmd_vel_topic: /pallet_truck/tricycle_controller/cmd_vel
+robot_radius: 0.5    # 0.1993 (front)  # 0.57197 (back)
+dock_displacement: 0.2
 stop_distance: 0.07
-max_linear_vel: 0.07
-max_angular_vel: 0.07
+max_linear_vel: 0.05
+max_angular_vel: 0.05
 limited_linear_vel: 0.2
 limited_angular_vel: 0.15
-xy_tolerance: 0.01      # pallet: 0.02 - 0.05
-yaw_tolerance: 0.02
+xy_tolerance: 0.02      # pallet: 0.02 - 0.05
+yaw_tolerance: 0.05
 p_rho: 0.5
 p_alpha: 1.0
 p_beta: -0.2
